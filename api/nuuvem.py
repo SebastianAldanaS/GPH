@@ -2,8 +2,8 @@ from typing import List, Optional, Dict
 from bs4 import BeautifulSoup
 import re
 from urllib.parse import urljoin, quote_plus
-from http_client import get_http_client
-from utils import _normalize_text, _similar
+from api.http_client import get_http_client
+from api.utils import _normalize_text, _similar
 
 _nuuvem_cache: Dict[str, object] = {"data": {}, "ts": {}}
 NUUVEM_CACHE_TTL = 10 * 60

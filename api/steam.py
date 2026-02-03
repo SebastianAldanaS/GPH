@@ -1,5 +1,5 @@
 from typing import List
-from http_client import get_http_client
+from api.http_client import get_http_client
 
 STORE_SEARCH_URL = "https://store.steampowered.com/api/storesearch/"
 STORE_APPDETAILS_URL = "https://store.steampowered.com/api/appdetails"

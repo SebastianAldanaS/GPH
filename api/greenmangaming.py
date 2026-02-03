@@ -5,8 +5,8 @@ from typing import List, Dict
 from urllib.parse import quote_plus
 
 from bs4 import BeautifulSoup
-from http_client import get_http_client
-from utils import _normalize_text, _similar
+from api.http_client import get_http_client
+from api.utils import _normalize_text, _similar
 
 BASE_URL = "https://www.greenmangaming.com"
 HEADERS = {"User-Agent": "Mozilla/5.0", "Accept-Language": "es-ES,es;q=0.9,en;q=0.8"}

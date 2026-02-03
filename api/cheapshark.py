@@ -1,8 +1,8 @@
 from typing import List, Dict, Optional
 import logging
 
-from http_client import get_http_client
-from utils import _normalize_text, _similar
+from api.http_client import get_http_client
+from api.utils import _normalize_text, _similar
 
 BASE_URL = "https://www.cheapshark.com/api/1.0"
 
