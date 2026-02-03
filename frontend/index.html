@@ -3,56 +3,71 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Steam Price Search</title>
+    <title>Comparador de precios · Videojuegos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <main class="container">
-      <h1>Buscar precio de videojuegos 🔎</h1>
-      <form id="searchForm">
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <div class="page">
+      <header class="header">
+        <h1 class="title">
+          <span class="title-icon" aria-hidden="true">◇</span>
+          Comparador de precios
+        </h1>
+        <p class="subtitle">Busca un juego y compara precios en Steam, Nuuvem, Fanatical y más.</p>
+      </header>
 
-          <div class="autocomplete" style="position:relative;flex:1;min-width:240px">
-            <input id="q" name="q" type="search" placeholder="Nombre del juego" autocomplete="off" required />
-            <div class="panel" hidden>
-              <ul id="suggestions" class="suggestions" role="listbox" aria-label="Sugerencias"></ul>
+      <main class="container">
+        <form id="searchForm" class="search-form">
+          <div class="search-row">
+            <div class="autocomplete search-field-wrap">
+              <label for="q" class="sr-only">Nombre del juego</label>
+              <input id="q" name="q" type="search" placeholder="Ej: Hollow Knight, Elden Ring…" autocomplete="off" required class="input input-search" />
+              <div class="panel" hidden>
+                <ul id="suggestions" class="suggestions" role="listbox" aria-label="Sugerencias"></ul>
+              </div>
+            </div>
+            <div class="search-controls">
+              <label for="cc" class="sr-only">Moneda</label>
+              <select id="cc" name="cc" title="Moneda" class="input input-select">
+                <option value="co">COP</option>
+                <option value="us">USD</option>
+              </select>
+              <label for="limit" class="sr-only">Resultados por tienda</label>
+              <input id="limit" name="limit" type="number" min="1" max="10" value="5" class="input input-number" title="Resultados por tienda" />
+              <button type="submit" class="btn btn-primary">Buscar</button>
             </div>
           </div>
+        </form>
 
-          <select id="cc" name="cc" title="País">
-            <option value="co">CO (COP)</option>
-            <option value="us">US (USD)</option>
-          </select>
-          <input id="limit" name="limit" type="number" min="1" max="10" value="5" />
-          <button type="submit">Buscar</button>
+        <div id="status" class="status" aria-live="polite"></div>
+
+        <div id="resultsByStore" class="stores">
+          <section class="store-card" data-store="steam">
+            <h2 class="store-title"><span class="store-icon">Steam</span></h2>
+            <ul id="results-steam" class="results"></ul>
+          </section>
+          <section class="store-card" data-store="nuuvem">
+            <h2 class="store-title"><span class="store-icon">Nuuvem</span></h2>
+            <ul id="results-nuuvem" class="results"></ul>
+          </section>
+          <section class="store-card" data-store="fanatical">
+            <h2 class="store-title"><span class="store-icon">Fanatical</span></h2>
+            <ul id="results-fanatical" class="results"></ul>
+          </section>
+          <section class="store-card" data-store="greenmangaming">
+            <h2 class="store-title"><span class="store-icon">Green Man Gaming</span></h2>
+            <ul id="results-greenmangaming" class="results"></ul>
+          </section>
+          <section class="store-card" data-store="instantgaming">
+            <h2 class="store-title"><span class="store-icon">Instant Gaming</span></h2>
+            <ul id="results-instantgaming" class="results"></ul>
+          </section>
         </div>
-      </form>
-
-      <div id="status" aria-live="polite"></div>
-
-      <div id="resultsByStore">
-        <section class="store-results" data-store="steam">
-          <h2>Steam</h2>
-          <ul id="results-steam" class="results"></ul>
-        </section>
-        <section class="store-results" data-store="nuuvem">
-          <h2>Nuuvem</h2>
-          <ul id="results-nuuvem" class="results"></ul>
-        </section>
-        <section class="store-results" data-store="fanatical">
-          <h2>Fanatical</h2>
-          <ul id="results-fanatical" class="results"></ul>
-        </section>
-        <section class="store-results" data-store="greenmangaming">
-          <h2>GreenManGaming</h2>
-          <ul id="results-greenmangaming" class="results"></ul>
-        </section>
-        <section class="store-results" data-store="instantgaming">
-          <h2>Instant Gaming</h2>
-          <ul id="results-instantgaming" class="results"></ul>
-        </section>
-      </div>
-    </main>
+      </main>
+    </div>
 
     <script src="config.js"></script>
     <script src="app.js"></script>
