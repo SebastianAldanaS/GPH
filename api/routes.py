@@ -1,12 +1,12 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import List
-from schemas import Suggestion, Preview, GamePrice
-from steam import store_search, fetch_price_for_app
-from nuuvem import nuuvem_search_v2, nuuvem_fetch_v2
-from cheapshark import cheapshark_search
-from greenmangaming import gmg_search
-from instantgaming import instantgaming_search
-from utils import _normalize_text
+from api.schemas import Suggestion, Preview, GamePrice
+from api.steam import store_search, fetch_price_for_app
+from api.nuuvem import nuuvem_search_v2, nuuvem_fetch_v2
+from api.cheapshark import cheapshark_search
+from api.greenmangaming import gmg_search
+from api.instantgaming import instantgaming_search
+from api.utils import _normalize_text
 import logging
 
 logger = logging.getLogger(__name__)

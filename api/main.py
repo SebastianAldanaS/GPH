@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
-from routes import router
+from api.routes import router
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
