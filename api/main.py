@@ -5,7 +5,7 @@ from pathlib import Path
 
 from routes import router
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 app = FastAPI(title="Steam Price Search API")
 
