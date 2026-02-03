@@ -2,6 +2,6 @@
   "name": "steam-price-search-frontend",
   "private": true,
   "scripts": {
-    "build": "node -e \"const u = process.env.VITE_API_URL || ''; require('fs').writeFileSync('config.js', 'window.__API_BASE__ = \\\"' + u.replace(/\"/g, '\\\\\"') + '\\\";');\""
+    "build": "node build.js"
   }
 }
