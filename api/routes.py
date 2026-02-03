@@ -14,6 +14,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+@router.get("/health")
+async def health():
+    """Para comprobaciones de Railway / monitoreo."""
+    return {"status": "ok"}
+
+
 @router.get("/autocomplete", response_model=List[Suggestion])
 async def autocomplete(q: str = Query(..., min_length=1), limit: int = Query(8, ge=1, le=20), cc: str = Query("co", min_length=2, max_length=2)):
     try:
