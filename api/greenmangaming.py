@@ -8,6 +8,12 @@ from bs4 import BeautifulSoup
 from api.http_client import get_http_client
 from api.utils import _normalize_text, _similar
 
+try:
+    import lxml  # noqa: F401
+    _BS_PARSER = "lxml"
+except ImportError:
+    _BS_PARSER = "html.parser"
+
 BASE_URL = "https://www.greenmangaming.com"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -21,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 async def _extract_from_page_text(text: str) -> Dict:
     try:
-        soup = BeautifulSoup(text, "lxml")
+        soup = BeautifulSoup(text, _BS_PARSER)
 
         def _parse_price_text(t: str):
             if not t:
@@ -83,7 +89,7 @@ async def _extract_from_page_text(text: str) -> Dict:
         }
 
     except Exception as e:
-        print("GMG parse error:", e)
+        logger.warning("GMG parse error: %s", e)
         return {}
 
 
@@ -122,7 +128,7 @@ async def gmg_search(q: str, limit: int = 3) -> List[Dict]:
         search_url = f"{BASE_URL}/es/search/?query={quote_plus(q)}"
         r = await client.get(search_url, headers=HEADERS, timeout=15.0)
         r.raise_for_status()
-        soup = BeautifulSoup(r.text, "lxml")
+        soup = BeautifulSoup(r.text, _BS_PARSER)
         items = (
             soup.select("a.product-item")
             or soup.select("a[href*='/games/']")

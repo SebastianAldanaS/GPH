@@ -82,7 +82,7 @@ async def search(q: str = Query(..., min_length=1), limit: int = Query(5, ge=1, 
 
     results = []
 
-    # If Steam search didn't return items, try Instant Gaming as a fallback
+    # Si Steam no devolvió nada, intentar Instant Gaming como fallback
     if not items:
         try:
             ig_candidates = await instantgaming_search(q, limit)
@@ -104,10 +104,7 @@ async def search(q: str = Query(..., min_length=1), limit: int = Query(5, ge=1, 
                 tiny_image=cand.get('tiny_image') or ''
             ))
 
-        if results:
-            return results
-
-        raise HTTPException(status_code=404, detail="No se encontraron coincidencias")
+        return results
 
     results = []
     for item in items:
@@ -180,12 +177,8 @@ async def search(q: str = Query(..., min_length=1), limit: int = Query(5, ge=1, 
             ))
             existing_norm.add(n)
 
-    # Enforce client-requested limit on combined results
     if len(results) > limit:
         results = results[:limit]
-
-    if not results:
-        raise HTTPException(status_code=404, detail="No se encontró información de precios para las coincidencias")
 
     return results
 

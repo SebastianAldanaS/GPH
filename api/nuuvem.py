@@ -5,6 +5,12 @@ from urllib.parse import urljoin, quote_plus
 from api.http_client import get_http_client
 from api.utils import _normalize_text, _similar
 
+try:
+    import lxml  # noqa: F401
+    _BS_PARSER = "lxml"
+except ImportError:
+    _BS_PARSER = "html.parser"
+
 _nuuvem_cache: Dict[str, object] = {"data": {}, "ts": {}}
 NUUVEM_CACHE_TTL = 10 * 60
 
@@ -47,7 +53,7 @@ async def nuuvem_search_v2(query: str, limit: int = 5, locale: str = "co-es") ->
         try:
             r = await client.get(url, headers=headers, timeout=15.0)
             r.raise_for_status()
-            soup = BeautifulSoup(r.text, "lxml")
+            soup = BeautifulSoup(r.text, _BS_PARSER)
 
             # Múltiples selectores: estructura actual puede variar
             products = (
@@ -132,7 +138,7 @@ async def nuuvem_fetch_v2(product: dict) -> Optional[dict]:
     try:
         r = await client.get(url, headers=headers, timeout=15.0)
         r.raise_for_status()
-        soup = BeautifulSoup(r.text, "lxml")
+        soup = BeautifulSoup(r.text, _BS_PARSER)
 
         price_el = (
             soup.select_one(".product-price--val span:not(.product-price--old)")

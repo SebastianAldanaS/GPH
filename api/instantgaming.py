@@ -7,6 +7,12 @@ from urllib.parse import quote_plus
 from api.http_client import get_http_client
 from api.utils import _normalize_text, _similar
 
+try:
+    import lxml  # noqa: F401
+    _BS_PARSER = "lxml"
+except ImportError:
+    _BS_PARSER = "html.parser"
+
 logger = logging.getLogger(__name__)
 
 HEADERS = {
@@ -69,7 +75,7 @@ async def instantgaming_search(nombre_juego: str, limit: int = 5) -> List[Dict]:
             r = await client.get(url, headers=HEADERS, timeout=15.0)
             if not (200 <= r.status_code < 500):
                 continue
-            soup = BeautifulSoup(r.text, "lxml")
+            soup = BeautifulSoup(r.text, _BS_PARSER)
             # Varios selectores por si cambió la estructura
             productos = (
                 soup.select("article.item")
