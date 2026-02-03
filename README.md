@@ -45,8 +45,9 @@ Una aplicación web para buscar precios de videojuegos en múltiples tiendas en 
 
 ## Estructura del Proyecto
 
-- `main.py`: Punto de entrada de la aplicación FastAPI
-- `routes.py`: Definición de rutas de la API
+- `api/main.py`: Punto de entrada de la aplicación FastAPI
+- `api/routes.py`: Definición de rutas de la API
+- `api/`: Archivos del backend (schemas, scrapers, utils)
 - `static/`: Archivos estáticos del frontend (HTML, CSS, JS)
 - `api/index.py`: Punto de entrada para Vercel
 - `vercel.json`: Configuración de despliegue para Vercel
