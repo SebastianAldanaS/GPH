@@ -9,14 +9,27 @@ BASE_URL = "https://www.cheapshark.com/api/1.0"
 logger = logging.getLogger(__name__)
 
 
-async def cheapshark_search(q: str, limit: int = 3) -> List[Dict]:
-    """Search CheapShark for the query and return matches for Fanatical (storeID == '15').
+def _title_matches_query(q_norm: str, title: str, min_similarity: float = 0.35) -> bool:
+    if not q_norm or not title:
+        return False
+    t_norm = _normalize_text(title)
+    if q_norm in t_norm:
+        return True
+    words = [w for w in q_norm.split() if len(w) >= 2]
+    if words and sum(1 for w in words if w in t_norm) >= max(1, len(words) * 0.5):
+        return True
+    return _similar(q_norm, t_norm) >= min_similarity
 
-    Returns a list of dicts with keys: nombre, precio_final (float USD), original_price (float USD|None), descuento (int), url, tiny_image
-    """
+
+async def cheapshark_search(q: str, limit: int = 3) -> List[Dict]:
+    """Search CheapShark for the query and return matches for Fanatical (storeID == '15')."""
     client = await get_http_client()
     try:
-        resp = await client.get(f"{BASE_URL}/games", params={"title": q, "limit": 5, "exact": 0}, timeout=10.0)
+        resp = await client.get(
+            f"{BASE_URL}/games",
+            params={"title": q, "limit": 20, "exact": 0},
+            timeout=15.0,
+        )
         resp.raise_for_status()
         juegos = resp.json() or []
     except Exception as e:
@@ -29,12 +42,14 @@ async def cheapshark_search(q: str, limit: int = 3) -> List[Dict]:
     res = []
     q_norm = _normalize_text(q)
 
-    for juego in juegos[:limit]:
+    for juego in juegos:
+        if len(res) >= limit:
+            break
         try:
             game_id = juego.get("gameID")
             if not game_id:
                 continue
-            details_resp = await client.get(f"{BASE_URL}/games", params={"id": game_id}, timeout=10.0)
+            details_resp = await client.get(f"{BASE_URL}/games", params={"id": game_id}, timeout=15.0)
             details_resp.raise_for_status()
             details = details_resp.json()
 
@@ -43,9 +58,7 @@ async def cheapshark_search(q: str, limit: int = 3) -> List[Dict]:
             if not title:
                 continue
 
-            # Basic similarity check
-            if _similar(q_norm, _normalize_text(title)) < 0.55:
-                # skip if clearly different
+            if not _title_matches_query(q_norm, title):
                 continue
 
             deals = [d for d in details.get("deals", []) if d.get("storeID") == "15"]

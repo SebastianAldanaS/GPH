@@ -9,7 +9,10 @@ from api.http_client import get_http_client
 from api.utils import _normalize_text, _similar
 
 BASE_URL = "https://www.greenmangaming.com"
-HEADERS = {"User-Agent": "Mozilla/5.0", "Accept-Language": "es-ES,es;q=0.9,en;q=0.8"}
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+}
 
 logger = logging.getLogger(__name__)
 
@@ -29,12 +32,20 @@ async def _extract_from_page_text(text: str) -> Dict:
             except:
                 return None
 
-        # 🔹 Precios GMG
-        el_cur = soup.select_one('gmgprice[type="currentPrice"]')
-        el_rrp = soup.select_one('gmgprice[type="rrp"]')
+        # Precios GMG: custom element gmgprice o fallback a texto con números
+        el_cur = soup.select_one('gmgprice[type="currentPrice"]') or soup.select_one("[data-current-price]")
+        el_rrp = soup.select_one('gmgprice[type="rrp"]') or soup.select_one("[data-rrp]")
 
-        precio = _parse_price_text(el_cur.text) if el_cur and el_cur.text.strip() else None
-        precio_original = _parse_price_text(el_rrp.text) if el_rrp and el_rrp.text.strip() else None
+        precio = _parse_price_text(el_cur.text) if el_cur and getattr(el_cur, "text", "").strip() else None
+        precio_original = _parse_price_text(el_rrp.text) if el_rrp and getattr(el_rrp, "text", "").strip() else None
+        if precio is None:
+            # Fallback: buscar cualquier bloque que parezca precio principal
+            for sel in [".product-price", "[class*='currentPrice']", ".price--current"]:
+                el = soup.select_one(sel)
+                if el:
+                    precio = _parse_price_text(el.get_text())
+                    if precio:
+                        break
 
         # 🔹 Si no hay descuento real, ignorar RRP
         porcentaje = 0
@@ -80,19 +91,24 @@ async def gmg_search(q: str, limit: int = 3) -> List[Dict]:
     client = await get_http_client()
 
     slug = re.sub(r"[^\w\s]", "", (q or "").lower()).strip()
-    slug = re.sub(r"\s+", "-", slug)
+    slug = re.sub(r"\s+", "-", slug).strip("-")
+    if not slug:
+        slug = q[:30].replace(" ", "-")
 
+    # Varias formas de URL directa (GMG usa slugs)
     candidate_urls = [
         f"{BASE_URL}/es/games/{slug}-pc/",
         f"{BASE_URL}/games/{slug}-pc/",
         f"{BASE_URL}/es/games/{slug}/",
         f"{BASE_URL}/games/{slug}/",
+        f"{BASE_URL}/games/pc/{slug}/",
+        f"{BASE_URL}/es/games/pc/{slug}/",
     ]
 
     for url in candidate_urls:
         try:
-            r = await client.get(url, headers=HEADERS, timeout=10.0)
-            if 200 <= r.status_code < 500:
+            r = await client.get(url, headers=HEADERS, timeout=15.0)
+            if 200 <= r.status_code < 400:
                 info = await _extract_from_page_text(r.text)
                 if info and info.get("precio") is not None:
                     info["tienda"] = "GreenManGaming"
@@ -101,36 +117,40 @@ async def gmg_search(q: str, limit: int = 3) -> List[Dict]:
         except Exception as e:
             logger.debug("GMG direct fetch failed for %s: %s", url, e)
 
-    # 🔁 Fallback búsqueda
+    # Fallback: búsqueda por query
     try:
         search_url = f"{BASE_URL}/es/search/?query={quote_plus(q)}"
-        r = await client.get(search_url, headers=HEADERS, timeout=10.0)
+        r = await client.get(search_url, headers=HEADERS, timeout=15.0)
         r.raise_for_status()
-
         soup = BeautifulSoup(r.text, "lxml")
-        items = soup.select("a.product-item") or []
-
+        items = (
+            soup.select("a.product-item")
+            or soup.select("a[href*='/games/']")
+            or soup.select("[class*='product'] a[href*='/games/']")
+            or []
+        )
+        q_norm = _normalize_text(q)
         results = []
-        for a in items[:limit]:
+        for a in items[: limit + 5]:
+            if len(results) >= limit:
+                break
             href = a.get("href")
-            if not href:
+            if not href or "/games/" not in href:
                 continue
-
             full = href if href.startswith("http") else BASE_URL + href
-
             try:
-                rr = await client.get(full, headers=HEADERS, timeout=10.0)
-                if 200 <= rr.status_code < 500:
+                rr = await client.get(full, headers=HEADERS, timeout=15.0)
+                if 200 <= rr.status_code < 400:
                     info = await _extract_from_page_text(rr.text)
                     if info and info.get("precio") is not None:
-                        info["tienda"] = "GreenManGaming"
-                        info["url"] = full
-                        results.append(info)
-            except:
+                        name = info.get("nombre", "")
+                        if name and (_similar(q_norm, _normalize_text(name)) >= 0.3 or q_norm in _normalize_text(name)):
+                            info["tienda"] = "GreenManGaming"
+                            info["url"] = full
+                            results.append(info)
+            except Exception:
                 continue
-
         return results
-
     except Exception as e:
         logger.debug("GMG search fetch failed: %s", e)
         return []

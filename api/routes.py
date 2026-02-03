@@ -192,10 +192,12 @@ async def search(q: str = Query(..., min_length=1), limit: int = Query(5, ge=1, 
 
 @router.get('/nuuvem', response_model=List[GamePrice])
 async def nuuvem(q: str = Query(..., min_length=1), limit: int = Query(3, ge=1, le=10), cc: str = Query('co', min_length=2, max_length=2)):
-    key = f"{q}:{cc}:{limit}"
-    # caching is handled inside nuuvem module if desired; keep lightweight here
-    candidates = await nuuvem_search_v2(q, limit)
     results = []
+    try:
+        candidates = await nuuvem_search_v2(q, limit)
+    except Exception as e:
+        logger.warning('nuuvem_search_v2 failed: %s', e)
+        return results
 
     for cand in candidates:
         info = None
@@ -210,7 +212,10 @@ async def nuuvem(q: str = Query(..., min_length=1), limit: int = Query(3, ge=1, 
                 'url': cand.get('url')
             }
         else:
-            info = await nuuvem_fetch_v2(cand)
+            try:
+                info = await nuuvem_fetch_v2(cand)
+            except Exception:
+                continue
 
         if not info or not info.get('precio_final'):
             continue
@@ -226,17 +231,17 @@ async def nuuvem(q: str = Query(..., min_length=1), limit: int = Query(3, ge=1, 
             tiny_image=info.get('tiny_image') or ''
         ))
 
-    if not results:
-        raise HTTPException(status_code=502, detail='No se pudo obtener información de Nuuvem para esa búsqueda')
-
     return results
 
 
 @router.get('/fanatical', response_model=List[GamePrice])
 async def fanatical(q: str = Query(..., min_length=1), limit: int = Query(3, ge=1, le=10), cc: str = Query('co', min_length=2, max_length=2)):
-    # CheapShark (Fanatical) search
-    candidates = await cheapshark_search(q, limit)
     results = []
+    try:
+        candidates = await cheapshark_search(q, limit)
+    except Exception as e:
+        logger.warning('cheapshark_search failed: %s', e)
+        return results
 
     for cand in candidates:
         if not cand or not cand.get('precio_final'):
@@ -253,53 +258,43 @@ async def fanatical(q: str = Query(..., min_length=1), limit: int = Query(3, ge=
             tiny_image=cand.get('tiny_image') or ''
         ))
 
-    if not results:        # No valid price results from Steam items — try Instant Gaming as fallback
+    if not results:
         try:
             ig_candidates = await instantgaming_search(q, limit)
         except Exception as e:
-            ig_candidates = []
-            logger.debug('instantgaming_search failed during fallback: %s', e)
-
-        if ig_candidates:
-            logger.debug('Fallback: Instant Gaming returned %s candidates for query=%s', len(ig_candidates), q)
-            for cand in ig_candidates:
-                if not cand or not cand.get('precio'):
-                    continue
-
-                results.append(GamePrice(
-                    appid=0,
-                    nombre=cand.get('nombre') or q,
-                    precio_final=round(cand.get('precio') or 0.0, 2),
-                    precio_original=round(cand.get('precio_original'), 2) if cand.get('precio_original') else None,
-                    porcentaje_descuento=int(cand.get('porcentaje_descuento', 0) or 0),
-                    moneda=cand.get('moneda') or 'EUR',
-                    steam_url=cand.get('url'),
-                    tiny_image=cand.get('tiny_image') or ''
-                ))
-
+            logger.debug('instantgaming_search fallback failed: %s', e)
             return results
-        raise HTTPException(status_code=404, detail='No se encontraron coincidencias en Fanatical')
+        for cand in ig_candidates:
+            if not cand or not cand.get('precio'):
+                continue
+            results.append(GamePrice(
+                appid=0,
+                nombre=cand.get('nombre') or q,
+                precio_final=round(cand.get('precio') or 0.0, 2),
+                precio_original=round(cand.get('precio_original'), 2) if cand.get('precio_original') else None,
+                porcentaje_descuento=int(cand.get('porcentaje_descuento', 0) or 0),
+                moneda=cand.get('moneda') or 'EUR',
+                steam_url=cand.get('url'),
+                tiny_image=cand.get('tiny_image') or ''
+            ))
+            if len(results) >= limit:
+                break
 
     return results
 
 
 @router.get('/greenmangaming', response_model=List[GamePrice])
 async def greenmangaming(q: str = Query(..., min_length=1), limit: int = Query(3, ge=1, le=10), cc: str = Query('co', min_length=2, max_length=2)):
-    print('DEBUG: greenmangaming request q=%s limit=%s cc=%s' % (q, limit, cc))
+    results = []
     try:
         candidates = await gmg_search(q, limit)
-        print('DEBUG: gmg_search returned %s candidates' % len(candidates))
     except Exception as e:
-        print('DEBUG: gmg_search failed', e)
-        raise HTTPException(status_code=502, detail='Error al consultar GreenManGaming')
-
-    results = []
+        logger.warning('gmg_search failed: %s', e)
+        return results
 
     for cand in candidates:
-        logger.debug('candidate: %s', cand)
         if not cand or not cand.get('precio'):
             continue
-
         moneda = cand.get('moneda') or 'USD'
         results.append(GamePrice(
             appid=0,
@@ -311,9 +306,6 @@ async def greenmangaming(q: str = Query(..., min_length=1), limit: int = Query(3
             steam_url=cand.get('url'),
             tiny_image=cand.get('tiny_image') or ''
         ))
-
-    if not results:
-        raise HTTPException(status_code=404, detail='No se encontraron coincidencias en GreenManGaming')
 
     return results
 
@@ -329,13 +321,12 @@ async def greenmangaming_debug(q: str = Query(..., min_length=1), limit: int = Q
 
 @router.get('/instantgaming', response_model=List[GamePrice])
 async def instantgaming(q: str = Query(..., min_length=1), limit: int = Query(3, ge=1, le=10), cc: str = Query('co', min_length=2, max_length=2)):
+    results = []
     try:
         candidates = await instantgaming_search(q, limit)
     except Exception as e:
-        print('DEBUG: instantgaming_search failed', e)
-        raise HTTPException(status_code=502, detail='Error al consultar Instant Gaming')
-
-    results = []
+        logger.warning('instantgaming_search failed: %s', e)
+        return results
 
     for cand in candidates:
         if not cand or not cand.get('precio'):
@@ -351,9 +342,6 @@ async def instantgaming(q: str = Query(..., min_length=1), limit: int = Query(3,
             steam_url=cand.get('url'),
             tiny_image=cand.get('tiny_image') or ''
         ))
-
-    if not results:
-        raise HTTPException(status_code=404, detail='No se encontraron coincidencias en Instant Gaming')
 
     return results
 
