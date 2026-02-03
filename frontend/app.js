@@ -25,12 +25,15 @@ async function fetchSuggestions(q, cc, limit = 8) {
   try {
     const params = new URLSearchParams({ q, cc, limit });
     const resp = await fetch(apiUrl(`/autocomplete?${params.toString()}`));
-    if (!resp.ok) return;
+    if (!resp.ok) {
+      panelEl.hidden = true;
+      return;
+    }
     const data = await resp.json();
 
     suggestionsEl.innerHTML = "";
     if (!data.length) {
-      suggestionsEl.hidden = true;
+      panelEl.hidden = true;
       return;
     }
 
@@ -77,10 +80,10 @@ async function fetchSuggestions(q, cc, limit = 8) {
       suggestionsEl.appendChild(li);
     }
 
-    suggestionsEl.hidden = false;
+    panelEl.hidden = false;
   } catch (err) {
     console.error("suggestions error", err);
-    suggestionsEl.hidden = true;
+    panelEl.hidden = true;
   }
 }
 
@@ -99,7 +102,7 @@ qInput.addEventListener("keydown", (ev) => {
       first.focus();
     }
   } else if (ev.key === "Escape") {
-    suggestionsEl.hidden = true;
+    panelEl.hidden = true;
   }
 });
 
@@ -140,7 +143,11 @@ function renderResultsTo(store, data) {
 
     const sub = document.createElement("div");
     sub.className = "small";
-    sub.innerHTML = `${item.appid ? `AppID: ${item.appid} • ` : ""}${item.moneda || ""}`;
+    if (store === "greenmangaming") {
+      sub.textContent = "";
+    } else {
+      sub.innerHTML = `${item.appid ? `AppID: ${item.appid} • ` : ""}${item.moneda || ""}`;
+    }
 
     meta.appendChild(name);
     meta.appendChild(sub);
@@ -148,41 +155,52 @@ function renderResultsTo(store, data) {
     const right = document.createElement("div");
     right.style.textAlign = "right";
 
-    const price = document.createElement("div");
-    price.className = "price";
-    price.textContent = item.precio_final != null ? new Intl.NumberFormat("es-CO", { style: "currency", currency: item.moneda || "COP" }).format(item.precio_final) : "—";
-
-    const badge = document.createElement("span");
-    badge.className = "badge-discount";
-    const pct = item.porcentaje_descuento != null ? Number(item.porcentaje_descuento) : 0;
-    if (pct > 0) {
-      badge.textContent = `-${pct}%`;
-      badge.setAttribute("aria-label", `Descuento ${pct} por ciento`);
-    } else {
-      badge.hidden = true;
-    }
-
-    const old = document.createElement("div");
-    old.className = "price-original small";
-    old.textContent = item.precio_original ? `Antes: ${new Intl.NumberFormat("es-CO", { style: "currency", currency: item.moneda || "COP" }).format(item.precio_original)}` : "";
-
     const link = document.createElement("a");
     link.href = item.steam_url || item.url || "#";
     link.target = "_blank";
     link.rel = "noopener noreferrer";
     link.className = "link small";
-    link.textContent = store === "steam" ? "Abrir en Steam" : "Abrir en tienda";
 
-    const priceRow = document.createElement("div");
-    priceRow.style.display = "inline-flex";
-    priceRow.style.alignItems = "center";
-    priceRow.style.gap = "8px";
-    priceRow.appendChild(price);
-    priceRow.appendChild(badge);
+    if (store === "greenmangaming") {
+      // GMG: solo mostrar "Disponible" y enlace para ver precio en la tienda
+      const available = document.createElement("div");
+      available.className = "price price-available";
+      available.textContent = "Disponible";
+      link.textContent = "Ver precio en tienda";
+      right.appendChild(available);
+      right.appendChild(link);
+    } else {
+      const price = document.createElement("div");
+      price.className = "price";
+      price.textContent = item.precio_final != null ? new Intl.NumberFormat("es-CO", { style: "currency", currency: item.moneda || "COP" }).format(item.precio_final) : "—";
 
-    right.appendChild(priceRow);
-    right.appendChild(old);
-    right.appendChild(link);
+      const badge = document.createElement("span");
+      badge.className = "badge-discount";
+      const pct = item.porcentaje_descuento != null ? Number(item.porcentaje_descuento) : 0;
+      if (pct > 0) {
+        badge.textContent = `-${pct}%`;
+        badge.setAttribute("aria-label", `Descuento ${pct} por ciento`);
+      } else {
+        badge.hidden = true;
+      }
+
+      const old = document.createElement("div");
+      old.className = "price-original small";
+      old.textContent = item.precio_original ? `Antes: ${new Intl.NumberFormat("es-CO", { style: "currency", currency: item.moneda || "COP" }).format(item.precio_original)}` : "";
+
+      link.textContent = store === "steam" ? "Abrir en Steam" : "Abrir en tienda";
+
+      const priceRow = document.createElement("div");
+      priceRow.style.display = "inline-flex";
+      priceRow.style.alignItems = "center";
+      priceRow.style.gap = "8px";
+      priceRow.appendChild(price);
+      priceRow.appendChild(badge);
+
+      right.appendChild(priceRow);
+      right.appendChild(old);
+      right.appendChild(link);
+    }
 
     li.appendChild(meta);
     li.appendChild(right);
@@ -193,7 +211,7 @@ function renderResultsTo(store, data) {
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
-  suggestionsEl.hidden = true;
+  panelEl.hidden = true;
   clearResults();
   status.textContent = "Buscando...";
 

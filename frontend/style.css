@@ -284,6 +284,11 @@ body {
   color: var(--accent);
   white-space: nowrap;
 }
+.result .price-available {
+  color: var(--success);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
 .result .price-original {
   font-size: 0.8rem;
   color: var(--text-muted);
