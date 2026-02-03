@@ -13,16 +13,32 @@ STATIC_DIR = BASE_DIR / "static"
 
 app = FastAPI(title="Steam Price Search API")
 
-# CORS: necesario cuando el front está en Vercel y el back en Railway
-# CORS_ORIGINS puede ser "https://tu-app.vercel.app" o "*" para desarrollo
-_cors_origins = os.environ.get("CORS_ORIGINS", "").strip() or "*"
-_origins_list = ["*"] if _cors_origins == "*" else [o.strip() for o in _cors_origins.split(",") if o.strip()]
+# CORS: necesario cuando el front está en Vercel y el back en Render
+# En Render: Environment → CORS_ORIGINS = https://gph-six.vercel.app (o "*" para permitir todos)
+_cors_raw = os.environ.get("CORS_ORIGINS", "").strip()
+if _cors_raw == "*":
+    _origins_list = ["*"]
+    _allow_credentials = False
+else:
+    _origins_list = [o.strip() for o in _cors_raw.split(",") if o.strip()]
+    # Si no hay ninguna configurada, permitir el front típico de Vercel para que funcione sin config
+    if not _origins_list:
+        _origins_list = [
+            "https://gph-six.vercel.app",
+            "https://www.gph-six.vercel.app",
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:5500",
+        ]
+    _allow_credentials = True
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_origins_list,
-    allow_credentials=(_cors_origins != "*"),  # con "*" el navegador no permite credentials
-    allow_methods=["*"],
+    allow_credentials=_allow_credentials,
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 app.include_router(router)
