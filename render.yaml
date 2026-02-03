@@ -1,0 +1,15 @@
+# Render Blueprint: backend Steam Price Search
+# https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: gph-api
+    runtime: python
+    region: oregon
+
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+
+    envVars:
+      - key: CORS_ORIGINS
+        sync: false
+        # En el Dashboard de Render, pon la URL de tu front en Vercel, ej: https://tu-app.vercel.app

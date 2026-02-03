@@ -11,7 +11,7 @@ Aplicación web para buscar precios de videojuegos en múltiples tiendas (Steam,
   - **Fanatical**: API de CheapShark.
 - **Frontend**: HTML/CSS/JS que consulta los endpoints y muestra resultados por tienda.
 
-El proyecto está preparado para **despliegue separado**: frontend en **Vercel** y backend en **Railway**.
+El proyecto está preparado para **despliegue separado**: frontend en **Vercel** y backend en **Render**.
 
 ---
 
@@ -37,8 +37,8 @@ El proyecto está preparado para **despliegue separado**: frontend en **Vercel**
 │   ├── config.js        # window.__API_BASE__ (vacío = mismo origen)
 │   ├── package.json     # script build para inyectar VITE_API_URL en config.js
 │   └── vercel.json
-├── Procfile             # Railway: uvicorn api.main:app
-├── railway.json
+├── Procfile             # Render/Heroku: uvicorn api.main:app
+├── render.yaml          # Render Blueprint (opcional)
 ├── requirements.txt
 └── README.md
 ```
@@ -68,21 +68,22 @@ El proyecto está preparado para **despliegue separado**: frontend en **Vercel**
 
 ---
 
-## Despliegue: Vercel (frontend) + Railway (backend)
+## Despliegue: Vercel (frontend) + Render (backend)
 
-### 1. Backend en Railway
+### 1. Backend en Render
 
-1. Crea un proyecto en [Railway](https://railway.app) y conecta este repositorio.
-2. Railway usará el **root del repo** (donde están `api/`, `requirements.txt`, `Procfile`).
-3. **Build**: Nixpacks detectará Python e instalará con `pip install -r requirements.txt`.
-4. **Start**: el `Procfile` ejecuta:
-   ```bash
-   uvicorn api.main:app --host 0.0.0.0 --port $PORT
-   ```
-   (O configura en Railway el comando: `uvicorn api.main:app --host 0.0.0.0 --port $PORT`.)
-5. Variables de entorno en Railway:
-   - **CORS_ORIGINS**: URL del frontend en Vercel, p. ej. `https://tu-app.vercel.app`. Para permitir cualquier origen (solo desarrollo) puedes usar `*`.
-6. Anota la URL pública del servicio (p. ej. `https://tu-proyecto.railway.app`).
+1. Entra en [Render](https://render.com) y crea un **Web Service** nuevo.
+2. Conecta este repositorio de GitHub (rama `master` o la que uses).
+3. Render detectará Python por `requirements.txt`. Configura:
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `uvicorn api.main:app --host 0.0.0.0 --port $PORT`
+   
+   Si tienes un `Procfile`, Render puede usarlo y el Start Command será el que define (línea `web:`).
+4. **Variables de entorno** (pestaña Environment):
+   - **CORS_ORIGINS**: URL de tu frontend en Vercel, p. ej. `https://tu-app.vercel.app`. Para desarrollo puedes usar `*`.
+5. Guarda y despliega. Anota la URL del servicio (p. ej. `https://gph-api.onrender.com`).
+
+**Opcional:** Si añades `render.yaml` al repo, puedes usar **Blueprint** en Render para crear el servicio desde el archivo (el nombre del servicio y los comandos quedarán definidos ahí).
 
 ### 2. Frontend en Vercel
 
@@ -91,16 +92,16 @@ El proyecto está preparado para **despliegue separado**: frontend en **Vercel**
    - **Root Directory**: `frontend` (importante).
    - **Framework Preset**: Other.
 3. Variables de entorno:
-   - **VITE_API_URL**: URL del backend en Railway, sin barra final (p. ej. `https://tu-proyecto.railway.app`).
-4. En cada deploy, el script `npm run build` (en `frontend/package.json`) genera `config.js` con esa URL, y el frontend usará `window.__API_BASE__` para llamar al backend.
-5. Despliega; la URL de Vercel será tu frontend (p. ej. `https://tu-app.vercel.app`).
+   - **VITE_API_URL**: URL del backend en Render, sin barra final (p. ej. `https://gph-api.onrender.com`).
+4. En cada deploy, el script `npm run build` genera `config.js` con esa URL; el frontend llama al backend con `window.__API_BASE__`.
+5. La URL de Vercel será tu frontend (p. ej. `https://tu-app.vercel.app`).
 
 ### 3. Resumen de variables
 
-| Dónde   | Variable      | Ejemplo                          |
-|---------|---------------|----------------------------------|
-| Railway | CORS_ORIGINS  | `https://tu-app.vercel.app`      |
-| Vercel  | VITE_API_URL  | `https://tu-proyecto.railway.app`|
+| Dónde  | Variable      | Ejemplo                          |
+|--------|---------------|----------------------------------|
+| Render | CORS_ORIGINS  | `https://tu-app.vercel.app`      |
+| Vercel | VITE_API_URL  | `https://gph-api.onrender.com`   |
 
 ---
 
@@ -109,7 +110,7 @@ El proyecto está preparado para **despliegue separado**: frontend en **Vercel**
 | Método | Ruta | Descripción |
 |--------|------|-------------|
 | GET | `/` | Página principal (HTML) si hay `api/static`; si no, mensaje JSON |
-| GET | `/health` | Estado del servicio (Railway/monitoreo) |
+| GET | `/health` | Estado del servicio (Render/monitoreo) |
 | GET | `/search` | Búsqueda Steam (+ merge con Instant Gaming) |
 | GET | `/nuuvem` | Búsqueda Nuuvem |
 | GET | `/fanatical` | Búsqueda Fanatical (CheapShark) |
@@ -126,7 +127,7 @@ Parámetros comunes: `q` (texto), `cc` (código país, p. ej. `co`), `limit`.
 
 - **Scraping**: Nuuvem, GreenManGaming e Instant Gaming dependen del HTML actual de cada sitio; si cambian la estructura, puede ser necesario ajustar selectores en `api/nuuvem.py`, `api/greenmangaming.py` y `api/instantgaming.py`.
 - **Steam**: usa la API pública de la tienda; no requiere API key.
-- **CORS**: en producción conviene fijar `CORS_ORIGINS` en Railway a la URL exacta del frontend en Vercel en lugar de `*`.
+- **CORS**: en producción conviene fijar `CORS_ORIGINS` en Render a la URL exacta del frontend en Vercel en lugar de `*`.
 
 ## Contribución
 
