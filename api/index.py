@@ -1,4 +1,5 @@
-from mangum import Mangum
-from main import app
-
-handler = Mangum(app)
+def handler(event, context):
+    return {
+        "statusCode": 200,
+        "body": "OK VERCEL"
+    }
